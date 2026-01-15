@@ -10,6 +10,9 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
+    <!-- Marked.js per il Markdown e i Link -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
     <style>
         :root {
             --chef-green: #2ecc71;
@@ -92,6 +95,13 @@
             border: 1px solid rgba(0,0,0,0.05);
         }
 
+        /* Stile per i link generati dall'agente */
+        .agent-msg a {
+            color: var(--chef-orange);
+            text-decoration: underline;
+            font-weight: 600;
+        }
+
         .input-wrapper {
             background: white;
             padding: 15px;
@@ -104,12 +114,6 @@
             padding: 12px;
             background: #f8f9fa;
             border-radius: 10px;
-        }
-
-        .form-control:focus {
-            box-shadow: none;
-            background: #fff;
-            border: 1px solid var(--chef-green);
         }
 
         .btn-send {
@@ -154,13 +158,14 @@
                 <div id="list-prefs" class="mb-4"></div>
                 
                 <h6 class="text-muted small"><i class="fas fa-exclamation-triangle"></i> VINCOLI</h6>
-                <div id="list-constraints"></div>
+                <div id="list-constraints" class="mb-4"></div>
 
                 <h6 class="text-muted small mt-3"><i class="fas fa-users"></i> CONTESTO</h6>
                 <div id="list-context" class="mb-3">
                     <div class="ing-item p-2">
                         <small>Persone:</small> <strong id="val-persone" class="text-primary">?</strong><br>
-                        <small>Occasione:</small> <strong id="val-occasione" class="text-primary">-</strong>
+                        <small>Occasione:</small> <strong id="val-occasione" class="text-primary">-</strong><br>
+                        <small>Abilità:</small> <strong id="val-livello" class="text-primary">-</strong>
                     </div>
                 </div>
             </div>
@@ -180,7 +185,7 @@
                 </div>
 
                 <div id="chat-container">
-                    <div class="agent-msg">Ciao! 👋 Sono il tuo assistente culinario. Prima di iniziare, dimmi pure cosa hai in frigo, per quante persone cuciniamo e se ci sono allergie!</div>
+                    <div class="agent-msg">Ciao! 👋 Sono lo Chef AI. Dimmi cosa hai in frigo, per quante persone cuciniamo e se ci sono allergie!</div>
                 </div>
                 
                 <div id="typing-indicator" class="typing ms-3">Lo Chef sta pensando...</div>
@@ -199,6 +204,21 @@
 </div>
 
 <script>
+    // Configurazione Marked per aprire i link in una nuova scheda
+    const renderer = new marked.Renderer();
+    renderer.link = function(href, title, text) {
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+    };
+    marked.setOptions({ renderer: renderer, breaks: true });
+
+    // Funzione di utilità per pulire i dati "string" o nulli inviati dall'AI
+    function cleanValue(val, fallback = "?") {
+        if (!val || val === "string" || val === "string()" || val === "string " || val.includes("...")) {
+            return fallback;
+        }
+        return val;
+    }
+
     async function sendMessage() {
         const input = document.getElementById('user-input');
         const chatContainer = document.getElementById('chat-container');
@@ -207,16 +227,12 @@
         
         if(!text) return;
 
-        // 1. Aggiungi il messaggio dell'UTENTE alla chat
         chatContainer.innerHTML += `<div class="user-msg">${text}</div>`;
         input.value = '';
         chatContainer.scrollTop = chatContainer.scrollHeight;
-
-        // 2. Mostra "Lo Chef sta pensando"
         typing.style.display = 'block';
 
         try {
-            // 3. Invia al server
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -226,50 +242,57 @@
             const data = await response.json();
             typing.style.display = 'none';
 
-            // 4. Aggiungi la risposta dell'AGENTE (ora data è definito!)
-            chatContainer.innerHTML += `<div class="agent-msg">${data.messaggio_chat.replace(/\n/g, '<br>')}</div>`;
+            const htmlContent = marked.parse(data.messaggio_chat);
+            chatContainer.innerHTML += `<div class="agent-msg">${htmlContent}</div>`;
             chatContainer.scrollTop = chatContainer.scrollHeight;
 
-            // 5. Aggiorna la sidebar
             updateSidebar(data.sidebar_data);
         } catch (error) {
-            console.error("Errore:", error);
             typing.style.display = 'none';
-            chatContainer.innerHTML += `<div class="agent-msg text-danger">Ops! Qualcosa è andato storto. Assicurati che il server Python sia attivo.</div>`;
+            chatContainer.innerHTML += `<div class="agent-msg text-danger">Ops! Il server non risponde.</div>`;
         }
     }
 
     function updateSidebar(data) {
         if (!data) return;
 
-        // Ingredienti
+        // 1. Ingredienti
         const ingList = document.getElementById('list-ingredients');
-        ingList.innerHTML = (data.ingredienti || []).map(i => `
-            <div class="ing-item p-2 mb-2">
-                <div class="d-flex justify-content-between">
-                    <strong>${i.tipo}</strong>
-                    <span class="badge bg-light text-dark">${i.quantita}</span>
+        ingList.innerHTML = (data.ingredienti || []).map(i => {
+            const tipo = cleanValue(i.tipo, "Nuovo ingrediente");
+            const qta = cleanValue(i.quantita, "q.b.");
+            const scad = cleanValue(i.scadenza, "?");
+            
+            return `
+                <div class="ing-item p-2 mb-2">
+                    <div class="d-flex justify-content-between">
+                        <strong>${tipo}</strong>
+                        <span class="badge bg-light text-dark">${qta}</span>
+                    </div>
+                    ${scad !== '?' ? `<div class="small text-danger mt-1"><i class="fas fa-clock"></i> Scad: ${scad}</div>` : ''}
                 </div>
-                ${i.scadenza && i.scadenza !== '?' ? `<div class="small text-danger mt-1"><i class="fas fa-clock"></i> Scad: ${i.scadenza}</div>` : ''}
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
-        // Preferenze
+        // 2. Preferenze
         const prefs = data.preferenze || [];
-        document.getElementById('list-prefs').innerHTML = prefs.map(p => 
-            `<span class="badge rounded-pill bg-info text-dark me-1 mb-1 p-2">${p}</span>`
-        ).join('');
+        document.getElementById('list-prefs').innerHTML = prefs
+            .filter(p => p !== "string")
+            .map(p => `<span class="badge rounded-pill bg-info text-dark me-1 mb-1 p-2">${p}</span>`)
+            .join('');
 
-        // Vincoli
-        const vincoli = data.vincoli || data.vincoli_salutari || [];
-        document.getElementById('list-constraints').innerHTML = vincoli.map(v => 
-            `<div class="alert alert-warning py-1 px-2 small mb-1"><i class="fas fa-shield-alt"></i> ${v}</div>`
-        ).join('');
+        // 3. Vincoli
+        const vincoli = data.vincoli || [];
+        document.getElementById('list-constraints').innerHTML = vincoli
+            .filter(v => v !== "string")
+            .map(v => `<div class="alert alert-warning py-1 px-2 small mb-1"><i class="fas fa-shield-alt"></i> ${v}</div>`)
+            .join('');
 
-        // Contesto
+        // 4. Contesto
         if (data.contesto) {
-            document.getElementById('val-persone').innerText = data.contesto.persone || '?';
-            document.getElementById('val-occasione').innerText = data.contesto.occasione || '-';
+            document.getElementById('val-persone').innerText = cleanValue(data.contesto.persone);
+            document.getElementById('val-occasione').innerText = cleanValue(data.contesto.occasione, "-");
+            document.getElementById('val-livello').innerText = cleanValue(data.contesto.livello_utente, "-");
         }
     }
 </script>
