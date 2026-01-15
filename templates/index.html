@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chef Agent AI | Il tuo assistente in cucina</title>
+    
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --chef-green: #2ecc71;
+            --chef-orange: #e67e22;
+            --bg-light: #f4f7f6;
+            --glass-white: rgba(255, 255, 255, 0.9);
+        }
+
+        body { 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Poppins', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar { 
+            height: 100vh; 
+            background: var(--glass-white); 
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(0,0,0,0.1); 
+            padding: 25px; 
+            overflow-y: auto;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+        }
+
+        .sidebar-title {
+            color: var(--chef-orange);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #chat-window {
+            height: calc(100vh - 150px);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        #chat-container { 
+            flex-grow: 1;
+            overflow-y: auto; 
+            background: transparent;
+            padding: 20px; 
+            scroll-behavior: smooth;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-msg { 
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white; 
+            padding: 12px 18px; 
+            border-radius: 20px 20px 0 20px; 
+            margin-bottom: 15px; 
+            width: fit-content; 
+            max-width: 75%; 
+            margin-left: auto;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .agent-msg { 
+            background: white; 
+            color: #333; 
+            padding: 15px 20px; 
+            border-radius: 20px 20px 20px 0; 
+            margin-bottom: 15px; 
+            width: fit-content; 
+            max-width: 80%; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            animation: slideIn 0.3s ease-out;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .input-wrapper {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+        }
+
+        .form-control {
+            border: none;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .form-control:focus {
+            box-shadow: none;
+            background: #fff;
+            border: 1px solid var(--chef-green);
+        }
+
+        .btn-send {
+            background: var(--chef-green);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            width: 50px;
+            transition: all 0.3s;
+        }
+
+        .ing-item {
+            background: #fff;
+            border-left: 4px solid var(--chef-green);
+            margin-bottom: 8px;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .typing {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3" id="sidebar">
+            <h5 class="sidebar-title"><i class="fas fa-utensils"></i> La tua Dispensa</h5>
+            <hr>
+            <div id="inventory-content">
+                <h6 class="text-muted small"><i class="fas fa-carrot"></i> INGREDIENTI</h6>
+                <div id="list-ingredients" class="mb-4"></div>
+                
+                <h6 class="text-muted small"><i class="fas fa-heart"></i> PREFERENZE</h6>
+                <div id="list-prefs" class="mb-4"></div>
+                
+                <h6 class="text-muted small"><i class="fas fa-exclamation-triangle"></i> VINCOLI</h6>
+                <div id="list-constraints"></div>
+
+                <h6 class="text-muted small mt-3"><i class="fas fa-users"></i> CONTESTO</h6>
+                <div id="list-context" class="mb-3">
+                    <div class="ing-item p-2">
+                        <small>Persone:</small> <strong id="val-persone" class="text-primary">?</strong><br>
+                        <small>Occasione:</small> <strong id="val-occasione" class="text-primary">-</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="col-md-9 p-4">
+            <div id="chat-window">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-success text-white rounded-circle p-2 me-3" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-0">Chef Agent AI</h4>
+                        <small class="text-success">Online • Pronto ad aiutarti</small>
+                    </div>
+                </div>
+
+                <div id="chat-container">
+                    <div class="agent-msg">Ciao! 👋 Sono il tuo assistente culinario. Prima di iniziare, dimmi pure cosa hai in frigo, per quante persone cuciniamo e se ci sono allergie!</div>
+                </div>
+                
+                <div id="typing-indicator" class="typing ms-3">Lo Chef sta pensando...</div>
+
+                <div class="input-wrapper">
+                    <div class="input-group">
+                        <input type="text" id="user-input" class="form-control" placeholder="Scrivi qui..." onkeypress="if(event.key === 'Enter') sendMessage()">
+                        <button class="btn btn-send" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const input = document.getElementById('user-input');
+        const chatContainer = document.getElementById('chat-container');
+        const typing = document.getElementById('typing-indicator');
+        const text = input.value;
+        
+        if(!text) return;
+
+        // 1. Aggiungi il messaggio dell'UTENTE alla chat
+        chatContainer.innerHTML += `<div class="user-msg">${text}</div>`;
+        input.value = '';
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // 2. Mostra "Lo Chef sta pensando"
+        typing.style.display = 'block';
+
+        try {
+            // 3. Invia al server
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: text})
+            });
+            
+            const data = await response.json();
+            typing.style.display = 'none';
+
+            // 4. Aggiungi la risposta dell'AGENTE (ora data è definito!)
+            chatContainer.innerHTML += `<div class="agent-msg">${data.messaggio_chat.replace(/\n/g, '<br>')}</div>`;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // 5. Aggiorna la sidebar
+            updateSidebar(data.sidebar_data);
+        } catch (error) {
+            console.error("Errore:", error);
+            typing.style.display = 'none';
+            chatContainer.innerHTML += `<div class="agent-msg text-danger">Ops! Qualcosa è andato storto. Assicurati che il server Python sia attivo.</div>`;
+        }
+    }
+
+    function updateSidebar(data) {
+        if (!data) return;
+
+        // Ingredienti
+        const ingList = document.getElementById('list-ingredients');
+        ingList.innerHTML = (data.ingredienti || []).map(i => `
+            <div class="ing-item p-2 mb-2">
+                <div class="d-flex justify-content-between">
+                    <strong>${i.tipo}</strong>
+                    <span class="badge bg-light text-dark">${i.quantita}</span>
+                </div>
+                ${i.scadenza && i.scadenza !== '?' ? `<div class="small text-danger mt-1"><i class="fas fa-clock"></i> Scad: ${i.scadenza}</div>` : ''}
+            </div>
+        `).join('');
+
+        // Preferenze
+        const prefs = data.preferenze || [];
+        document.getElementById('list-prefs').innerHTML = prefs.map(p => 
+            `<span class="badge rounded-pill bg-info text-dark me-1 mb-1 p-2">${p}</span>`
+        ).join('');
+
+        // Vincoli
+        const vincoli = data.vincoli || data.vincoli_salutari || [];
+        document.getElementById('list-constraints').innerHTML = vincoli.map(v => 
+            `<div class="alert alert-warning py-1 px-2 small mb-1"><i class="fas fa-shield-alt"></i> ${v}</div>`
+        ).join('');
+
+        // Contesto
+        if (data.contesto) {
+            document.getElementById('val-persone').innerText = data.contesto.persone || '?';
+            document.getElementById('val-occasione').innerText = data.contesto.occasione || '-';
+        }
+    }
+</script>
+
+</body>
+</html>
