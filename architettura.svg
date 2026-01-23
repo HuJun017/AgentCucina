@@ -1,0 +1,110 @@
+
+<svg width="1000" height="700" xmlns="http://www.w3.org/2000/svg">
+  <!-- Sfondo -->
+  <rect width="1000" height="700" fill="#f8f9fa" />
+  
+  <!-- Titolo -->
+  <text x="500" y="40" font-family="Arial" font-size="24" font-weight="bold" text-anchor="middle" fill="#2c3e50">Architettura AgentCucina - Flusso Dati</text>
+
+  <!-- Gruppo Utente/Frontend -->
+  <rect x="50" y="100" width="220" height="400" rx="10" fill="#ffffff" stroke="#2ecc71" stroke-width="2"/>
+  <text x="160" y="130" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">FRONTEND (Browser)</text>
+  <rect x="70" y="150" width="180" height="60" rx="5" fill="#e8f8f5" stroke="#27ae60"/>
+  <text x="160" y="185" font-family="Arial" font-size="12" text-anchor="middle">Interfaccia Chat (JS)</text>
+  <rect x="70" y="300" width="180" height="60" rx="5" fill="#e8f8f5" stroke="#27ae60"/>
+  <text x="160" y="335" font-family="Arial" font-size="12" text-anchor="middle">Sidebar (Inventory/Context)</text>
+
+  <!-- Gruppo Flask Backend -->
+  <rect x="380" y="100" width="250" height="450" rx="10" fill="#ffffff" stroke="#e67e22" stroke-width="2"/>
+  <text x="505" y="130" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">BACKEND (Flask)</text>
+  
+  <rect x="400" y="150" width="210" height="40" rx="5" fill="#fef5e7" stroke="#d35400"/>
+  <text x="505" y="175" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle">Endpoint /chat</text>
+  
+  <rect x="400" y="210" width="210" height="80" rx="5" fill="#fef5e7" stroke="#d35400" stroke-dasharray="5,5"/>
+  <text x="505" y="235" font-family="Arial" font-size="12" text-anchor="middle" font-weight="bold">PROMPT DI SISTEMA</text>
+  <text x="505" y="255" font-family="Arial" font-size="10" text-anchor="middle">(Regole, Vincoli, Formato JSON)</text>
+  
+  <rect x="400" y="320" width="210" height="60" rx="5" fill="#fef5e7" stroke="#d35400"/>
+  <text x="505" y="355" font-family="Arial" font-size="12" text-anchor="middle">Gestione Sessione (History)</text>
+
+  <rect x="400" y="420" width="210" height="40" rx="5" fill="#fef5e7" stroke="#d35400"/>
+  <text x="505" y="445" font-family="Arial" font-size="12" text-anchor="middle">JSON Extractor/Cleaner</text>
+
+  <!-- Gruppo AI & Tools -->
+  <!-- Groq -->
+  <rect x="730" y="100" width="240" height="150" rx="10" fill="#ffffff" stroke="#3498db" stroke-width="2"/>
+  <text x="850" y="130" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">GROQ API</text>
+  <rect x="750" y="150" width="200" height="60" rx="5" fill="#ebf5fb" stroke="#2980b9"/>
+  <text x="850" y="175" font-family="Arial" font-size="13" font-weight="bold" text-anchor="middle">llama-3.3-70b-versatile</text>
+  <text x="850" y="195" font-family="Arial" font-size="11" text-anchor="middle">(Temperature 0)</text>
+
+  <!-- Tavily -->
+  <rect x="730" y="300" width="240" height="120" rx="10" fill="#ffffff" stroke="#9b59b6" stroke-width="2"/>
+  <text x="850" y="330" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">INTERNET (Tavily)</text>
+  <rect x="750" y="350" width="200" height="50" rx="5" fill="#f5eef8" stroke="#8e44ad"/>
+  <text x="850" y="380" font-family="Arial" font-size="12" text-anchor="middle">Ricerca Ricette Reali</text>
+
+  <!-- Frecce e Flussi -->
+  <g fill="none" stroke="#555" stroke-width="2" marker-end="url(#arrow)">
+    <!-- 1. Invio Messaggio -->
+    <path d="M 250 180 L 400 180" />
+    <circle cx="325" cy="180" r="12" fill="#2c3e50"/>
+    <text x="325" y="185" fill="white" font-size="10" text-anchor="middle">1</text>
+    <text x="325" y="165" fill="#555" font-size="10" text-anchor="middle">Messaggio + Stato</text>
+
+    <!-- 2. Richiesta a Groq -->
+    <path d="M 610 200 L 730 200" />
+    <circle cx="670" cy="200" r="12" fill="#2c3e50"/>
+    <text x="670" y="205" fill="white" font-size="10" text-anchor="middle">2</text>
+    <text x="670" y="190" fill="#555" font-size="10" text-anchor="middle">Prompt + Query</text>
+
+    <!-- 3. Risposta Groq -->
+    <path d="M 730 230 L 610 230" />
+    <circle cx="670" cy="230" r="12" fill="#2c3e50"/>
+    <text x="670" y="235" fill="white" font-size="10" text-anchor="middle">3</text>
+    <text x="670" y="248" fill="#555" font-size="10" text-anchor="middle">JSON (Need Search?)</text>
+
+    <!-- 4. Ricerca Tavily -->
+    <path d="M 505 380 L 505 400 L 730 360" />
+    <circle cx="620" cy="385" r="12" fill="#2c3e50"/>
+    <text x="620" y="390" fill="white" font-size="10" text-anchor="middle">4</text>
+    <text x="620" y="410" fill="#555" font-size="10" text-anchor="middle">Tool Invoke</text>
+
+    <!-- 5. Risultati Web -->
+    <path d="M 730 390 L 610 440" />
+    <circle cx="670" cy="425" r="12" fill="#2c3e50"/>
+    <text x="670" y="430" fill="white" font-size="10" text-anchor="middle">5</text>
+
+    <!-- 6. Ri-analisi Groq -->
+    <path d="M 610 215 L 730 215" stroke-dasharray="4"/>
+    <circle cx="670" cy="215" r="12" fill="#2c3e50"/>
+    <text x="670" y="220" fill="white" font-size="10" text-anchor="middle">6</text>
+
+    <!-- 7. Risposta Finale al Frontend -->
+    <path d="M 380 440 L 160 440 L 160 360" />
+    <circle cx="270" cy="440" r="12" fill="#2c3e50"/>
+    <text x="270" y="445" fill="white" font-size="10" text-anchor="middle">7</text>
+    <text x="270" y="458" fill="#555" font-size="10" text-anchor="middle">JSON Finale</text>
+
+    <!-- 8. Aggiornamento UI -->
+    <path d="M 160 210 L 160 300" />
+    <circle cx="160" cy="255" r="12" fill="#2c3e50"/>
+    <text x="160" y="260" fill="white" font-size="10" text-anchor="middle">8</text>
+    <text x="220" y="260" fill="#555" font-size="10" text-anchor="middle">Render Markdown</text>
+  </g>
+
+  <!-- Definizione punta freccia -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orientation="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#555" />
+    </marker>
+  </defs>
+  
+  <!-- Legenda Prompt -->
+  <rect x="730" y="550" width="240" height="120" rx="5" fill="#fff" stroke="#333" stroke-width="1"/>
+  <text x="740" y="575" font-family="Arial" font-size="14" font-weight="bold">Legenda Prompt:</text>
+  <text x="740" y="600" font-family="Arial" font-size="12">- System Prompt: Regole Chef</text>
+  <text x="740" y="620" font-family="Arial" font-size="12">- Human Message: Input + Stato</text>
+  <text x="740" y="640" font-family="Arial" font-size="12">- Tool Feedback: Risultati Tavily</text>
+</svg>
