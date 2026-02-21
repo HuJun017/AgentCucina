@@ -2,5 +2,6 @@ flask
 langchain
 langchain-groq
 langchain-community
+langchain-tavily
 tavily-python
 python-dotenv

@@ -135,11 +135,16 @@
         }
 
         .typing {
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             color: #888;
             margin-bottom: 10px;
             display: none;
+            font-style: italic;
+            padding-left: 8px;
+            border-left: 3px solid var(--chef-green);
         }
+        .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+        .form-control:disabled { opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -221,16 +226,22 @@
 
     async function sendMessage() {
         const input = document.getElementById('user-input');
+        const btn = document.querySelector('.btn-send');
         const chatContainer = document.getElementById('chat-container');
         const typing = document.getElementById('typing-indicator');
-        const text = input.value;
-        
-        if(!text) return;
+        const text = input.value.trim();
+
+        if (!text) return;
 
         chatContainer.innerHTML += `<div class="user-msg">${text}</div>`;
         input.value = '';
         chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // Disabilita input durante elaborazione
+        input.disabled = true;
+        btn.disabled = true;
         typing.style.display = 'block';
+        typing.textContent = 'Sto analizzando la tua richiesta...';
 
         try {
             const response = await fetch('/chat', {
@@ -238,18 +249,47 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({message: text})
             });
-            
-            const data = await response.json();
-            typing.style.display = 'none';
 
-            const htmlContent = marked.parse(data.messaggio_chat);
-            chatContainer.innerHTML += `<div class="agent-msg">${htmlContent}</div>`;
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
 
-            updateSidebar(data.sidebar_data);
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                // Processa linee complete
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // mantieni l'ultima riga incompleta
+
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const payload = JSON.parse(line.slice(6));
+
+                    if (payload.type === 'status') {
+                        typing.textContent = payload.msg;
+                    } else if (payload.type === 'done') {
+                        typing.style.display = 'none';
+                        const htmlContent = marked.parse(payload.data.messaggio_chat);
+                        chatContainer.innerHTML += `<div class="agent-msg">${htmlContent}</div>`;
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                        updateSidebar(payload.data.sidebar_data);
+                    } else if (payload.type === 'error') {
+                        typing.style.display = 'none';
+                        const htmlContent = marked.parse(payload.data.messaggio_chat);
+                        chatContainer.innerHTML += `<div class="agent-msg text-danger">${htmlContent}</div>`;
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }
+                }
+            }
         } catch (error) {
             typing.style.display = 'none';
             chatContainer.innerHTML += `<div class="agent-msg text-danger">Ops! Il server non risponde.</div>`;
+        } finally {
+            input.disabled = false;
+            btn.disabled = false;
+            input.focus();
         }
     }
 
