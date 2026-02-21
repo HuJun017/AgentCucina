@@ -224,6 +224,13 @@
         return val;
     }
 
+    // Stato lato client (stateless server)
+    let chatHistory = [];
+    let sidebarData = {
+        ingredienti: [], preferenze: [], vincoli: [],
+        contesto: { persone: "?", occasione: "?", livello_utente: "?" }
+    };
+
     async function sendMessage() {
         const input = document.getElementById('user-input');
         const btn = document.querySelector('.btn-send');
@@ -247,7 +254,11 @@
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({message: text})
+                body: JSON.stringify({
+                    message: text,
+                    chat_history: chatHistory,
+                    sidebar_data: sidebarData
+                })
             });
 
             const reader = response.body.getReader();
@@ -271,10 +282,13 @@
                         typing.textContent = payload.msg;
                     } else if (payload.type === 'done') {
                         typing.style.display = 'none';
+                        // Aggiorna stato locale
+                        chatHistory = payload.chat_history || chatHistory;
+                        sidebarData = payload.data.sidebar_data || sidebarData;
                         const htmlContent = marked.parse(payload.data.messaggio_chat);
                         chatContainer.innerHTML += `<div class="agent-msg">${htmlContent}</div>`;
                         chatContainer.scrollTop = chatContainer.scrollHeight;
-                        updateSidebar(payload.data.sidebar_data);
+                        updateSidebar(sidebarData);
                     } else if (payload.type === 'error') {
                         typing.style.display = 'none';
                         const htmlContent = marked.parse(payload.data.messaggio_chat);

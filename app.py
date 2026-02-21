@@ -2,7 +2,7 @@ import os
 import json
 import re
 import logging
-from flask import Flask, render_template, request, session, Response
+from flask import Flask, render_template, request, Response
 from dotenv import load_dotenv
 
 from langchain_groq import ChatGroq
@@ -28,6 +28,11 @@ tavily_tool = TavilySearch(max_results=3)
 
 MAX_HISTORY_TURNS = 10
 
+EMPTY_INVENTORY = {
+    "ingredienti": [], "preferenze": [], "vincoli": [],
+    "contesto": {"persone": "?", "occasione": "?", "livello_utente": "?"}
+}
+
 def execute_search_tool(query):
     """Esegue materialmente la ricerca su internet tramite Tavily."""
     try:
@@ -36,7 +41,7 @@ def execute_search_tool(query):
     except Exception as e:
         return f"Errore durante la ricerca: {e}"
 
-# 2. PROMPT DI SISTEMA (Ottimizzato per evitare il bug "string")
+# 2. PROMPT DI SISTEMA
 SYSTEM_PROMPT = """Sei uno Chef Stellato esperto in gestione delle eccedenze alimentari.
 Il tuo obiettivo è guidare l'utente verso la ricetta perfetta, minimizzando gli sprechi.
 
@@ -79,21 +84,15 @@ NOTA: Se stai proponendo le ricette finali, il 'messaggio_chat' deve essere molt
 
 @app.route('/')
 def index():
-    session['chat_history'] = []
-    session['inventory'] = {
-        "ingredienti": [], "preferenze": [], "vincoli": [],
-        "contesto": {"persone": "?", "occasione": "?", "livello_utente": "?"}
-    }
     return render_template('index.html')
 
 def extract_json(text):
-    """Estrae il JSON gestendo caratteri di controllo non validi e placeholder errati."""
+    """Estrae il JSON gestendo caratteri di controllo non validi."""
     match = re.search(r'\{.*\}', text, re.DOTALL)
     if match:
         json_str = match.group(0)
         try:
-            data = json.loads(json_str, strict=False)
-            return data
+            return json.loads(json_str, strict=False)
         except json.JSONDecodeError:
             clean_str = re.sub(r'[\x00-\x1F\x7F]', '', json_str)
             return json.loads(clean_str, strict=False)
@@ -116,9 +115,11 @@ def _build_messages(chat_history, current_inv, user_input):
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    user_input = request.json.get("message", "").strip()
-    chat_history = list(session.get('chat_history', []))
-    current_inv = session.get('inventory', {"ingredienti":[],"preferenze":[],"vincoli":[],"contesto":{"persone":"?","occasione":"?","livello_utente":"?"}})
+    body = request.json or {}
+    user_input = body.get("message", "").strip()
+    # Lo stato arriva dal client (stateless server-side)
+    chat_history = body.get("chat_history", [])
+    current_inv = body.get("sidebar_data", EMPTY_INVENTORY)
 
     def generate():
         yield _sse_event({"type": "status", "msg": "Sto analizzando la tua richiesta..."})
@@ -139,13 +140,11 @@ def chat():
                 data = extract_json(final_response.content)
                 logger.info("Seconda LLM call ok.")
 
-            new_history = chat_history + [("human", user_input), ("ai", data["messaggio_chat"])]
+            new_history = chat_history + [["human", user_input], ["ai", data["messaggio_chat"]]]
             if len(new_history) > MAX_HISTORY_TURNS * 2:
                 new_history = new_history[-(MAX_HISTORY_TURNS * 2):]
-            session['inventory'] = data.get('sidebar_data', current_inv)
-            session['chat_history'] = new_history
-            session.modified = True
-            yield _sse_event({"type": "done", "data": data})
+
+            yield _sse_event({"type": "done", "data": data, "chat_history": new_history})
 
         except Exception as e:
             logger.error("Errore agente: %s", e, exc_info=True)
