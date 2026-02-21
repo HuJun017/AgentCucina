@@ -211,7 +211,7 @@
 <script>
     // Configurazione Marked per aprire i link in una nuova scheda
     const renderer = new marked.Renderer();
-    renderer.link = function(href, title, text) {
+    renderer.link = function({ href, title, text }) {
         return `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
     };
     marked.setOptions({ renderer: renderer, breaks: true });

@@ -24,7 +24,24 @@ llm = ChatGroq(
     groq_api_key=os.getenv("GROQ_API_KEY")
 )
 
-tavily_tool = TavilySearch(max_results=3)
+TRUSTED_RECIPE_DOMAINS = [
+    "giallozafferano.it",
+    "cucchiaio.it",
+    "cookaround.com",
+    "ricette.it",
+    "lacucinaitaliana.it",
+    "fattoincasadabenedetta.it",
+    "dissapore.com",
+    "bbcgoodfood.com",
+    "allrecipes.com",
+    "seriouseats.com",
+]
+
+tavily_tool = TavilySearch(
+    max_results=3,
+    search_depth="advanced",
+    include_domains=TRUSTED_RECIPE_DOMAINS,
+)
 
 MAX_HISTORY_TURNS = 10
 
@@ -132,7 +149,8 @@ def chat():
             if data.get("bisogno_ricerca") and data.get("query_ricerca"):
                 yield _sse_event({"type": "status", "msg": "Cerco ricette online..."})
                 search_results = execute_search_tool(data["query_ricerca"])
-                logger.info("Tavily ok per query: %s", data["query_ricerca"])
+                logger.info("Tavily ok per query: %s | risultati: %s", data["query_ricerca"],
+                    [r.get("url") for r in search_results.get("results", [])] if isinstance(search_results, dict) else "raw")
                 messages.append(AIMessage(content=response.content))
                 messages.append(HumanMessage(content=f"RISULTATI REALI DAL WEB: {search_results}. Ora genera la risposta finale includendo i link reali."))
                 yield _sse_event({"type": "status", "msg": "Preparo la risposta finale..."})
