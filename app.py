@@ -36,6 +36,7 @@ tavily = TavilySearch(
 )
 
 MODEL = "llama-3.3-70b-versatile"
+CRITIC_MODEL = "llama-3.1-8b-instant"  # modello leggero per il critico
 MAX_HISTORY = 20  # messaggi (coppie user/assistant)
 MAX_AGENT_STEPS = 6  # limite iterazioni agent loop per evitare loop infiniti
 
@@ -100,11 +101,82 @@ SYSTEM_PROMPT = """Sei Chef Marco, chef italiano anti-spreco. Aiuti a cucinare c
 
 **Ricette:** dopo `update_pantry`, al turno successivo usa `search_recipes`. Proponi 2-3 opzioni con link, tempi, difficoltà e ingredienti extra. Dai priorità assoluta a ciò che scade prima.
 
-**Stile:** cordiale, diretto, markdown per le ricette, un consiglio tecnico utile per ricetta."""
+**Stile:** cordiale, diretto, markdown per le ricette, un consiglio tecnico utile per ricetta.
+
+**Critico:** ogni risultato di `search_recipes` include una valutazione [CRITICO]. Se dice "sufficienti", non cercare ancora. Se dice "cambia approccio", usa una query diversa o rispondi con ciò che hai."""
 
 
 def sse(payload: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def get_previous_queries(messages: list) -> list[str]:
+    """Estrae le query di search_recipes già eseguite dalla chat history."""
+    queries = []
+    for msg in messages:
+        if msg.get("role") == "assistant":
+            for tc in msg.get("tool_calls", []):
+                if tc.get("function", {}).get("name") == "search_recipes":
+                    try:
+                        args = json.loads(tc["function"]["arguments"])
+                        q = args.get("query", "")
+                        if q:
+                            queries.append(q)
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+    return queries
+
+
+def run_critic(query: str, results: list, pantry: dict, prev_queries: list) -> dict:
+    """
+    Chiama un LLM leggero per valutare se i risultati della ricerca sono sufficienti.
+    Restituisce {"sufficient": bool, "feedback": str}.
+    """
+    critic_messages = [
+        {
+            "role": "system",
+            "content": (
+                "Sei un critico di ricerche culinarie. Valuta se i risultati sono utili.\n"
+                "Rispondi SOLO con JSON valido: {\"sufficient\": true/false, \"feedback\": \"stringa breve\"}\n\n"
+                "Regole:\n"
+                "- sufficient=true se almeno 1 risultato contiene una ricetta concreta con ingredienti\n"
+                "- sufficient=false se i risultati sono vuoti, irrilevanti o quasi identici a ricerche precedenti\n"
+                "- Se la query attuale è semanticamente simile a una precedente, scrivi feedback con suggerimento alternativo"
+            ),
+        },
+        {
+            "role": "user",
+            "content": json.dumps(
+                {
+                    "query_attuale": query,
+                    "query_precedenti": prev_queries,
+                    "risultati": [
+                        {"title": r.get("title", ""), "snippet": r.get("snippet", "")[:200]}
+                        for r in results[:2]
+                    ],
+                    "vincoli_utente": pantry.get("vincoli", []),
+                },
+                ensure_ascii=False,
+            ),
+        },
+    ]
+
+    try:
+        resp = groq_client.chat.completions.create(
+            model=CRITIC_MODEL,
+            messages=critic_messages,
+            temperature=0,
+            max_tokens=120,
+        )
+        raw = (resp.choices[0].message.content or "{}").strip()
+        # Estrai il JSON anche se il modello aggiunge testo extra
+        start, end = raw.find("{"), raw.rfind("}") + 1
+        verdict = json.loads(raw[start:end]) if start != -1 else {}
+        logger.info("Critico [%s]: sufficient=%s | %s", query[:40], verdict.get("sufficient"), verdict.get("feedback", ""))
+        return verdict
+    except Exception as e:
+        logger.warning("Critico fallito (%s), assumo sufficient=True", e)
+        return {"sufficient": True, "feedback": "Valutazione non disponibile."}
 
 
 @app.route("/")
@@ -197,6 +269,16 @@ def chat():
                             ]
                             result_str = json.dumps(trimmed, ensure_ascii=False)
                             logger.info("Tavily OK: %d chars per '%s'", len(result_str), q)
+
+                            # Critico: valuta i risultati e inietta il verdetto
+                            yield sse({"type": "status", "msg": "Valuto i risultati..."})
+                            prev_queries = get_previous_queries(messages)
+                            verdict = run_critic(q, trimmed, pantry_state, prev_queries)
+                            if verdict.get("sufficient", True):
+                                result_str += f'\n\n[CRITICO]: Risultati sufficienti. Non cercare ulteriormente.'
+                            else:
+                                fb = verdict.get("feedback", "Risultati non utili.")
+                                result_str += f'\n\n[CRITICO]: {fb} Evita query simili alle precedenti: {prev_queries}.'
                         except Exception as e:
                             result_str = f"Errore nella ricerca: {e}"
                             logger.error("Tavily error: %s", e)
