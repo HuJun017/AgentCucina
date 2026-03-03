@@ -3,265 +3,547 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chef Agent AI | Il tuo assistente in cucina</title>
-    
-    <!-- Google Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Marked.js per il Markdown e i Link -->
+    <title>Chef Marco AI</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
+
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         :root {
-            --chef-green: #2ecc71;
-            --chef-orange: #e67e22;
-            --bg-light: #f4f7f6;
-            --glass-white: rgba(255, 255, 255, 0.9);
+            --orange: #e67e22;
+            --orange-light: #f39c12;
+            --green: #27ae60;
+            --red: #e74c3c;
+            --blue: #3498db;
+            --bg: #f0f2f5;
+            --sidebar-bg: #1a1f2e;
+            --sidebar-text: #cdd6f4;
+            --sidebar-muted: #6c7a9c;
+            --card-bg: #ffffff;
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --radius: 14px;
         }
 
-        body { 
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            font-family: 'Poppins', sans-serif;
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            color: #2d3436;
+        }
+
+        /* ── Sidebar ── */
+        #sidebar {
+            width: 290px;
+            min-width: 290px;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 18px;
+            overflow-y: auto;
+            gap: 20px;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .sidebar-logo .icon {
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-light));
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .sidebar-logo h1 { font-size: 1rem; font-weight: 700; color: #fff; }
+        .sidebar-logo p { font-size: 0.72rem; color: var(--sidebar-muted); }
+
+        .sidebar-section { display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-section-title {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--sidebar-muted);
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        .ing-card {
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 10px 12px;
+            border-left: 3px solid var(--green);
+            font-size: 0.82rem;
+        }
+        .ing-card.urgent { border-left-color: var(--red); }
+        .ing-card.warning { border-left-color: var(--orange); }
+
+        .ing-card .ing-name { font-weight: 600; color: #fff; }
+        .ing-card .ing-meta { color: var(--sidebar-muted); font-size: 0.75rem; margin-top: 3px; }
+        .ing-card .ing-scad { font-size: 0.72rem; margin-top: 5px; }
+        .ing-card.urgent .ing-scad { color: #ff7675; }
+        .ing-card.warning .ing-scad { color: #fdcb6e; }
+        .ing-card .ing-scad i { margin-right: 4px; }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 0.73rem;
+            font-weight: 500;
+            margin: 2px;
+            background: rgba(255,255,255,0.08);
+            color: var(--sidebar-text);
+        }
+        .tag.constraint {
+            background: rgba(231,76,60,0.15);
+            color: #ff7675;
+        }
+
+        .context-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .ctx-item {
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 0.78rem;
+        }
+        .ctx-item .label { color: var(--sidebar-muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.8px; }
+        .ctx-item .value { color: #fff; font-weight: 600; margin-top: 4px; }
+
+        .btn-reset {
+            margin-top: auto;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--sidebar-muted);
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .btn-reset:hover { background: rgba(231,76,60,0.15); color: #ff7675; border-color: rgba(231,76,60,0.3); }
+
+        /* ── Main chat area ── */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             height: 100vh;
             overflow: hidden;
         }
 
-        #sidebar { 
-            height: 100vh; 
-            background: var(--glass-white); 
-            backdrop-filter: blur(10px);
-            border-right: 1px solid rgba(0,0,0,0.1); 
-            padding: 25px; 
-            overflow-y: auto;
-            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
-        }
-
-        .sidebar-title {
-            color: var(--chef-orange);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 20px;
+        #chat-header {
+            padding: 18px 28px;
+            background: var(--card-bg);
+            border-bottom: 1px solid rgba(0,0,0,0.07);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 14px;
+            box-shadow: var(--shadow);
+            z-index: 10;
         }
+        .avatar {
+            width: 46px; height: 46px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-light));
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+        }
+        .header-info h2 { font-size: 1rem; font-weight: 700; }
+        .header-info p { font-size: 0.78rem; color: #27ae60; }
 
-        #chat-window {
-            height: calc(100vh - 150px);
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px 32px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-        }
-
-        #chat-container { 
-            flex-grow: 1;
-            overflow-y: auto; 
-            background: transparent;
-            padding: 20px; 
+            gap: 4px;
             scroll-behavior: smooth;
         }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .user-msg { 
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white; 
-            padding: 12px 18px; 
-            border-radius: 20px 20px 0 20px; 
-            margin-bottom: 15px; 
-            width: fit-content; 
-            max-width: 75%; 
-            margin-left: auto;
-            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
-            animation: slideIn 0.3s ease-out;
+        .msg {
+            max-width: 78%;
+            padding: 13px 18px;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            animation: fadeUp 0.25s ease-out;
+            word-break: break-word;
         }
 
-        .agent-msg { 
-            background: white; 
-            color: #333; 
-            padding: 15px 20px; 
-            border-radius: 20px 20px 20px 0; 
-            margin-bottom: 15px; 
-            width: fit-content; 
-            max-width: 80%; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            animation: slideIn 0.3s ease-out;
+        .user-msg {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+            box-shadow: 0 4px 14px rgba(52,152,219,0.25);
+        }
+
+        .agent-msg {
+            align-self: flex-start;
+            background: var(--card-bg);
+            color: #2d3436;
+            border-radius: 4px 18px 18px 18px;
+            box-shadow: var(--shadow);
             border: 1px solid rgba(0,0,0,0.05);
         }
 
-        /* Stile per i link generati dall'agente */
+        .agent-msg.error-msg {
+            border-left: 3px solid var(--red);
+            background: #fff5f5;
+        }
+
+        /* Markdown dentro i messaggi agent */
+        .agent-msg h1, .agent-msg h2, .agent-msg h3 {
+            margin: 12px 0 6px;
+            color: var(--orange);
+        }
+        .agent-msg h1 { font-size: 1.1rem; }
+        .agent-msg h2 { font-size: 1rem; }
+        .agent-msg h3 { font-size: 0.9rem; }
+        .agent-msg p { margin-bottom: 8px; }
+        .agent-msg p:last-child { margin-bottom: 0; }
+        .agent-msg ul, .agent-msg ol { padding-left: 20px; margin-bottom: 8px; }
+        .agent-msg li { margin-bottom: 4px; }
+        .agent-msg strong { color: #1a1a2e; }
         .agent-msg a {
-            color: var(--chef-orange);
+            color: var(--orange);
             text-decoration: underline;
-            font-weight: 600;
+            font-weight: 500;
         }
-
-        .input-wrapper {
-            background: white;
-            padding: 15px;
-            border-radius: 15px;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
-        }
-
-        .form-control {
-            border: none;
-            padding: 12px;
+        .agent-msg a:hover { color: var(--orange-light); }
+        .agent-msg code {
             background: #f8f9fa;
-            border-radius: 10px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
         }
+        .agent-msg hr { border: none; border-top: 1px solid #eee; margin: 10px 0; }
+
+        /* Cursore lampeggiante durante lo streaming */
+        .streaming-cursor::after {
+            content: '▋';
+            animation: blink 0.8s step-end infinite;
+            color: var(--orange);
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Status indicator */
+        #status-bar {
+            display: none;
+            align-self: flex-start;
+            background: rgba(230,126,34,0.1);
+            color: var(--orange);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            gap: 8px;
+            align-items: center;
+            animation: fadeUp 0.2s ease-out;
+        }
+        #status-bar.visible { display: flex; }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            background: var(--orange);
+            border-radius: 50%;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* Input area */
+        #input-area {
+            padding: 16px 28px 20px;
+            background: var(--card-bg);
+            border-top: 1px solid rgba(0,0,0,0.07);
+        }
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: #f8f9fa;
+            border-radius: 14px;
+            padding: 8px 8px 8px 18px;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .input-row:focus-within { border-color: var(--orange); background: #fff; }
+
+        #user-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            color: #2d3436;
+        }
+        #user-input::placeholder { color: #b2bec3; }
+        #user-input:disabled { opacity: 0.6; }
 
         .btn-send {
-            background: var(--chef-green);
-            color: white;
-            border: none;
+            width: 42px; height: 42px;
             border-radius: 10px;
-            width: 50px;
-            transition: all 0.3s;
+            border: none;
+            background: linear-gradient(135deg, var(--orange), var(--orange-light));
+            color: white;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s;
+            flex-shrink: 0;
         }
-
-        .ing-item {
-            background: #fff;
-            border-left: 4px solid var(--chef-green);
-            margin-bottom: 8px;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-
-        .typing {
-            font-size: 0.85rem;
-            color: #888;
-            margin-bottom: 10px;
-            display: none;
-            font-style: italic;
-            padding-left: 8px;
-            border-left: 3px solid var(--chef-green);
-        }
-        .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
-        .form-control:disabled { opacity: 0.7; }
+        .btn-send:hover { transform: scale(1.05); opacity: 0.9; }
+        .btn-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
     </style>
 </head>
 <body>
 
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-3" id="sidebar">
-            <h5 class="sidebar-title"><i class="fas fa-utensils"></i> La tua Dispensa</h5>
-            <hr>
-            <div id="inventory-content">
-                <h6 class="text-muted small"><i class="fas fa-carrot"></i> INGREDIENTI</h6>
-                <div id="list-ingredients" class="mb-4"></div>
-                
-                <h6 class="text-muted small"><i class="fas fa-heart"></i> PREFERENZE</h6>
-                <div id="list-prefs" class="mb-4"></div>
-                
-                <h6 class="text-muted small"><i class="fas fa-exclamation-triangle"></i> VINCOLI</h6>
-                <div id="list-constraints" class="mb-4"></div>
+<!-- Sidebar -->
+<aside id="sidebar">
+    <div class="sidebar-logo">
+        <div class="icon">👨‍🍳</div>
+        <div>
+            <h1>Chef Marco AI</h1>
+            <p>Cucina anti-spreco</p>
+        </div>
+    </div>
 
-                <h6 class="text-muted small mt-3"><i class="fas fa-users"></i> CONTESTO</h6>
-                <div id="list-context" class="mb-3">
-                    <div class="ing-item p-2">
-                        <small>Persone:</small> <strong id="val-persone" class="text-primary">?</strong><br>
-                        <small>Occasione:</small> <strong id="val-occasione" class="text-primary">-</strong><br>
-                        <small>Abilità:</small> <strong id="val-livello" class="text-primary">-</strong>
-                    </div>
-                </div>
+    <div class="sidebar-section" id="section-ingredienti">
+        <div class="sidebar-section-title"><i class="fas fa-carrot"></i> Ingredienti</div>
+        <div id="list-ingredienti"><span style="color:var(--sidebar-muted);font-size:.8rem">Nessuno ancora</span></div>
+    </div>
+
+    <div class="sidebar-section" id="section-prefs">
+        <div class="sidebar-section-title"><i class="fas fa-heart"></i> Preferenze</div>
+        <div id="list-preferenze"><span style="color:var(--sidebar-muted);font-size:.8rem">—</span></div>
+    </div>
+
+    <div class="sidebar-section" id="section-vincoli">
+        <div class="sidebar-section-title"><i class="fas fa-shield-alt"></i> Vincoli</div>
+        <div id="list-vincoli"><span style="color:var(--sidebar-muted);font-size:.8rem">—</span></div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title"><i class="fas fa-info-circle"></i> Contesto</div>
+        <div class="context-grid">
+            <div class="ctx-item">
+                <div class="label"><i class="fas fa-users"></i> Persone</div>
+                <div class="value" id="ctx-persone">?</div>
+            </div>
+            <div class="ctx-item">
+                <div class="label"><i class="fas fa-clock"></i> Occasione</div>
+                <div class="value" id="ctx-occasione">—</div>
+            </div>
+            <div class="ctx-item" style="grid-column: span 2;">
+                <div class="label"><i class="fas fa-graduation-cap"></i> Livello</div>
+                <div class="value" id="ctx-livello">—</div>
             </div>
         </div>
+    </div>
 
-        <!-- Chat Area -->
-        <div class="col-md-9 p-4">
-            <div id="chat-window">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="bg-success text-white rounded-circle p-2 me-3" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <div>
-                        <h4 class="mb-0">Chef Agent AI</h4>
-                        <small class="text-success">Online • Pronto ad aiutarti</small>
-                    </div>
-                </div>
+    <button class="btn-reset" onclick="resetChat()">
+        <i class="fas fa-rotate-left"></i> Nuova conversazione
+    </button>
+</aside>
 
-                <div id="chat-container">
-                    <div class="agent-msg">Ciao! 👋 Sono lo Chef AI. Dimmi cosa hai in frigo, per quante persone cuciniamo e se ci sono allergie!</div>
-                </div>
-                
-                <div id="typing-indicator" class="typing ms-3">Lo Chef sta pensando...</div>
+<!-- Main -->
+<div id="main">
+    <div id="chat-header">
+        <div class="avatar">🍳</div>
+        <div class="header-info">
+            <h2>Chef Marco</h2>
+            <p><i class="fas fa-circle" style="font-size:.5rem"></i> Online — pronto ad aiutarti</p>
+        </div>
+    </div>
 
-                <div class="input-wrapper">
-                    <div class="input-group">
-                        <input type="text" id="user-input" class="form-control" placeholder="Scrivi qui..." onkeypress="if(event.key === 'Enter') sendMessage()">
-                        <button class="btn btn-send" onclick="sendMessage()">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <div id="chat-container">
+        <div class="msg agent-msg">
+            Ciao! Sono Chef Marco 👋<br>
+            Dimmi cosa hai in frigo e in dispensa: ingredienti, quantità e — per i freschi — quando scadono. Ci penso io a trovare la ricetta migliore per non sprecare nulla!
+        </div>
+        <div id="status-bar"><div class="status-dot"></div><span id="status-text">Sto pensando...</span></div>
+    </div>
+
+    <div id="input-area">
+        <div class="input-row">
+            <input type="text" id="user-input" placeholder="Es: ho pollo, uova e mozzarella che scade domani..." maxlength="500">
+            <button class="btn-send" id="btn-send" onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
         </div>
     </div>
 </div>
 
 <script>
-    // Configurazione Marked per aprire i link in una nuova scheda
+    // ── Marked.js config ──
     const renderer = new marked.Renderer();
-    renderer.link = function({ href, title, text }) {
-        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
-    };
-    marked.setOptions({ renderer: renderer, breaks: true });
+    renderer.link = ({ href, text }) =>
+        `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+    marked.use({ renderer, breaks: true, gfm: true });
 
-    // Funzione di utilità per pulire i dati "string" o nulli inviati dall'AI
-    function cleanValue(val, fallback = "?") {
-        if (!val || val === "string" || val === "string()" || val === "string " || val.includes("...")) {
-            return fallback;
-        }
-        return val;
-    }
-
-    // Stato lato client (stateless server)
+    // ── Stato client-side ──
     let chatHistory = [];
-    let sidebarData = {
+    let pantry = {
         ingredienti: [], preferenze: [], vincoli: [],
         contesto: { persone: "?", occasione: "?", livello_utente: "?" }
     };
 
-    async function sendMessage() {
-        const input = document.getElementById('user-input');
-        const btn = document.querySelector('.btn-send');
-        const chatContainer = document.getElementById('chat-container');
-        const typing = document.getElementById('typing-indicator');
-        const text = input.value.trim();
+    // Messaggio corrente in streaming
+    let streamingEl = null;
+    let streamingText = "";
+    let isLoading = false;
 
+    // ── UI helpers ──
+    const chatContainer = document.getElementById('chat-container');
+    const statusBar = document.getElementById('status-bar');
+    const statusText = document.getElementById('status-text');
+    const input = document.getElementById('user-input');
+    const btnSend = document.getElementById('btn-send');
+
+    function setLoading(v) {
+        isLoading = v;
+        input.disabled = v;
+        btnSend.disabled = v;
+        if (!v) { statusBar.classList.remove('visible'); }
+    }
+
+    function setStatus(msg) {
+        if (!msg) { statusBar.classList.remove('visible'); return; }
+        statusText.textContent = msg;
+        statusBar.classList.add('visible');
+        // Lo status bar deve stare in fondo alla lista messaggi
+        chatContainer.appendChild(statusBar);
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function appendUserMsg(text) {
+        const div = document.createElement('div');
+        div.className = 'msg user-msg';
+        div.textContent = text;
+        chatContainer.insertBefore(div, statusBar);
+        scrollToBottom();
+    }
+
+    function createAgentMsgEl() {
+        const div = document.createElement('div');
+        div.className = 'msg agent-msg streaming-cursor';
+        chatContainer.insertBefore(div, statusBar);
+        scrollToBottom();
+        return div;
+    }
+
+    function finalizeAgentMsg(el, markdown) {
+        el.classList.remove('streaming-cursor');
+        el.innerHTML = marked.parse(markdown || "");
+        scrollToBottom();
+    }
+
+    function appendAgentMsg(markdown, isError = false) {
+        const div = document.createElement('div');
+        div.className = 'msg agent-msg' + (isError ? ' error-msg' : '');
+        div.innerHTML = isError ? markdown : marked.parse(markdown || "");
+        chatContainer.insertBefore(div, statusBar);
+        scrollToBottom();
+    }
+
+    // ── Gestione eventi SSE ──
+    function handleEvent(ev) {
+        switch (ev.type) {
+            case 'status':
+                setStatus(ev.msg);
+                break;
+
+            case 'chunk':
+                // Primo chunk: nascondi status, crea div messaggio
+                if (!streamingEl) {
+                    setStatus('');
+                    streamingEl = createAgentMsgEl();
+                    streamingText = '';
+                }
+                streamingText += ev.text;
+                // Mostra il testo raw durante lo streaming (più veloce di marked.parse ogni chunk)
+                streamingEl.textContent = streamingText;
+                scrollToBottom();
+                break;
+
+            case 'pantry':
+                pantry = ev.data;
+                updateSidebar(pantry);
+                break;
+
+            case 'done':
+                chatHistory = ev.chat_history || chatHistory;
+                pantry = ev.pantry || pantry;
+                updateSidebar(pantry);
+                if (streamingEl) {
+                    // Re-render con markdown ora che abbiamo il testo completo
+                    finalizeAgentMsg(streamingEl, ev.message);
+                } else {
+                    appendAgentMsg(ev.message);
+                }
+                streamingEl = null;
+                streamingText = '';
+                break;
+
+            case 'error':
+                if (streamingEl) {
+                    streamingEl.remove();
+                    streamingEl = null;
+                }
+                appendAgentMsg(ev.message || "Ops, qualcosa è andato storto!", true);
+                break;
+        }
+    }
+
+    // ── Invio messaggio ──
+    async function sendMessage() {
+        if (isLoading) return;
+        const text = input.value.trim();
         if (!text) return;
 
-        chatContainer.innerHTML += `<div class="user-msg">${text}</div>`;
+        appendUserMsg(text);
         input.value = '';
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-
-        // Disabilita input durante elaborazione
-        input.disabled = true;
-        btn.disabled = true;
-        typing.style.display = 'block';
-        typing.textContent = 'Sto analizzando la tua richiesta...';
+        setLoading(true);
+        setStatus('Sto pensando...');
 
         try {
-            const response = await fetch('/chat', {
+            const resp = await fetch('/chat', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    message: text,
-                    chat_history: chatHistory,
-                    sidebar_data: sidebarData
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text, chat_history: chatHistory, pantry })
             });
 
-            const reader = response.body.getReader();
+            const reader = resp.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
 
@@ -270,84 +552,101 @@
                 if (done) break;
                 buffer += decoder.decode(value, { stream: true });
 
-                // Processa linee complete
                 const lines = buffer.split('\n');
-                buffer = lines.pop(); // mantieni l'ultima riga incompleta
+                buffer = lines.pop(); // mantieni riga incompleta
 
                 for (const line of lines) {
                     if (!line.startsWith('data: ')) continue;
-                    const payload = JSON.parse(line.slice(6));
-
-                    if (payload.type === 'status') {
-                        typing.textContent = payload.msg;
-                    } else if (payload.type === 'done') {
-                        typing.style.display = 'none';
-                        // Aggiorna stato locale
-                        chatHistory = payload.chat_history || chatHistory;
-                        sidebarData = payload.data.sidebar_data || sidebarData;
-                        const htmlContent = marked.parse(payload.data.messaggio_chat);
-                        chatContainer.innerHTML += `<div class="agent-msg">${htmlContent}</div>`;
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                        updateSidebar(sidebarData);
-                    } else if (payload.type === 'error') {
-                        typing.style.display = 'none';
-                        const htmlContent = marked.parse(payload.data.messaggio_chat);
-                        chatContainer.innerHTML += `<div class="agent-msg text-danger">${htmlContent}</div>`;
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    try {
+                        const ev = JSON.parse(line.slice(6));
+                        handleEvent(ev);
+                    } catch (e) {
+                        console.warn('SSE parse error:', e, line);
                     }
                 }
             }
-        } catch (error) {
-            typing.style.display = 'none';
-            chatContainer.innerHTML += `<div class="agent-msg text-danger">Ops! Il server non risponde.</div>`;
+        } catch (e) {
+            console.error('Fetch error:', e);
+            appendAgentMsg('Il server non risponde. Controlla la connessione e riprova.', true);
         } finally {
-            input.disabled = false;
-            btn.disabled = false;
+            setLoading(false);
+            streamingEl = null;
+            streamingText = '';
             input.focus();
         }
+    }
+
+    // ── Enter per inviare ──
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // ── Reset conversazione ──
+    function resetChat() {
+        chatHistory = [];
+        pantry = {
+            ingredienti: [], preferenze: [], vincoli: [],
+            contesto: { persone: "?", occasione: "?", livello_utente: "?" }
+        };
+        updateSidebar(pantry);
+        // Rimuove tutti i messaggi tranne il primo (benvenuto)
+        const msgs = chatContainer.querySelectorAll('.msg');
+        msgs.forEach((m, i) => { if (i > 0) m.remove(); });
+        input.focus();
+    }
+
+    // ── Aggiornamento sidebar ──
+    function urgencyClass(scadenza) {
+        if (!scadenza || scadenza === 'non specificata') return '';
+        const s = scadenza.toLowerCase();
+        if (s.includes('oggi') || s.includes('domani') || s.includes('1 giorno') || s.includes('scaduto')) return 'urgent';
+        if (s.includes('2 giorn') || s.includes('3 giorn') || s.includes('4 giorn') || s.includes('5 giorn')) return 'warning';
+        return '';
     }
 
     function updateSidebar(data) {
         if (!data) return;
 
-        // 1. Ingredienti
-        const ingList = document.getElementById('list-ingredients');
-        ingList.innerHTML = (data.ingredienti || []).map(i => {
-            const tipo = cleanValue(i.tipo, "Nuovo ingrediente");
-            const qta = cleanValue(i.quantita, "q.b.");
-            const scad = cleanValue(i.scadenza, "?");
-            
-            return `
-                <div class="ing-item p-2 mb-2">
-                    <div class="d-flex justify-content-between">
-                        <strong>${tipo}</strong>
-                        <span class="badge bg-light text-dark">${qta}</span>
-                    </div>
-                    ${scad !== '?' ? `<div class="small text-danger mt-1"><i class="fas fa-clock"></i> Scad: ${scad}</div>` : ''}
-                </div>
-            `;
-        }).join('');
-
-        // 2. Preferenze
-        const prefs = data.preferenze || [];
-        document.getElementById('list-prefs').innerHTML = prefs
-            .filter(p => p !== "string")
-            .map(p => `<span class="badge rounded-pill bg-info text-dark me-1 mb-1 p-2">${p}</span>`)
-            .join('');
-
-        // 3. Vincoli
-        const vincoli = data.vincoli || [];
-        document.getElementById('list-constraints').innerHTML = vincoli
-            .filter(v => v !== "string")
-            .map(v => `<div class="alert alert-warning py-1 px-2 small mb-1"><i class="fas fa-shield-alt"></i> ${v}</div>`)
-            .join('');
-
-        // 4. Contesto
-        if (data.contesto) {
-            document.getElementById('val-persone').innerText = cleanValue(data.contesto.persone);
-            document.getElementById('val-occasione').innerText = cleanValue(data.contesto.occasione, "-");
-            document.getElementById('val-livello').innerText = cleanValue(data.contesto.livello_utente, "-");
+        // Ingredienti
+        const ingList = document.getElementById('list-ingredienti');
+        if (data.ingredienti && data.ingredienti.length > 0) {
+            ingList.innerHTML = data.ingredienti.map(i => {
+                const u = urgencyClass(i.scadenza);
+                const scadHtml = (i.scadenza && i.scadenza !== 'non specificata')
+                    ? `<div class="ing-scad"><i class="fas fa-clock"></i> ${i.scadenza}</div>`
+                    : '';
+                return `<div class="ing-card ${u}">
+                    <div class="ing-name">${i.tipo || '?'}</div>
+                    <div class="ing-meta">${i.quantita || ''}</div>
+                    ${scadHtml}
+                </div>`;
+            }).join('');
+        } else {
+            ingList.innerHTML = '<span style="color:var(--sidebar-muted);font-size:.8rem">Nessuno ancora</span>';
         }
+
+        // Preferenze
+        const prefEl = document.getElementById('list-preferenze');
+        const prefs = (data.preferenze || []).filter(Boolean);
+        prefEl.innerHTML = prefs.length
+            ? prefs.map(p => `<span class="tag">${p}</span>`).join('')
+            : '<span style="color:var(--sidebar-muted);font-size:.8rem">—</span>';
+
+        // Vincoli
+        const vincEl = document.getElementById('list-vincoli');
+        const vincs = (data.vincoli || []).filter(Boolean);
+        vincEl.innerHTML = vincs.length
+            ? vincs.map(v => `<span class="tag constraint"><i class="fas fa-exclamation-triangle" style="font-size:.65rem"></i> ${v}</span>`).join('')
+            : '<span style="color:var(--sidebar-muted);font-size:.8rem">—</span>';
+
+        // Contesto
+        const ctx = data.contesto || {};
+        document.getElementById('ctx-persone').textContent = ctx.persone || '?';
+        document.getElementById('ctx-occasione').textContent = ctx.occasione || '—';
+        document.getElementById('ctx-livello').textContent = ctx.livello_utente || '—';
     }
 </script>
 

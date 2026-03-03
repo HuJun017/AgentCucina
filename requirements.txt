@@ -1,7 +1,4 @@
 flask
-langchain
-langchain-groq
-langchain-community
+groq
 langchain-tavily
-tavily-python
 python-dotenv
